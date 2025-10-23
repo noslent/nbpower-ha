@@ -1,7 +1,7 @@
 import json
-from typing import Optional, Dict, Any, List
+from datetime import date, timedelta
+from typing import Optional, Dict, Any
 from urllib.parse import urljoin
-from datetime import date
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -221,6 +221,63 @@ class NBPowerClient:
             "highest_kw": _num(d.get("Highest")),
         }
 
+    @staticmethod
+    def extract_mi_day(payload: dict, target_date: Optional[date] = None) -> dict:
+        """Return a summary for a 15-minute (Mi) usage payload."""
+
+        data = (payload or {}).get("data") or {}
+        intervals = data.get("objUsageGenerationResultSetTwo")
+        if not isinstance(intervals, list) or not intervals:
+            return {}
+
+        interval_list: list[dict[str, Any]] = []
+        total_kwh = 0.0
+        total_cost = 0.0
+        peak_demand = None
+        usage_present = False
+        cost_present = False
+
+        for row in intervals:
+            usage = _num(row.get("UsageValue"))
+            if usage is None:
+                usage = _num(row.get("Consumption"))
+            demand = _num(row.get("DemandValue"))
+            amount = _num(row.get("Amount"))
+
+            if usage is not None:
+                total_kwh += usage
+                usage_present = True
+            if amount is not None:
+                total_cost += amount
+                cost_present = True
+            if demand is not None:
+                peak_demand = demand if peak_demand is None else max(peak_demand, demand)
+
+            interval_list.append(
+                {
+                    "time": row.get("Hourly"),
+                    "usage_kwh": usage,
+                    "demand_kw": demand,
+                    "cost": amount,
+                    "status": row.get("ValidationStatus"),
+                }
+            )
+
+        result: dict[str, Any] = {
+            "mi_last_date": target_date.isoformat() if isinstance(target_date, date) else None,
+            "mi_interval_count": len(interval_list),
+            "mi_interval_data": interval_list,
+        }
+
+        if usage_present:
+            result["mi_last_total_kwh"] = round(total_kwh, 3)
+        if cost_present:
+            result["mi_last_total_cost"] = round(total_cost, 2)
+        if peak_demand is not None:
+            result["mi_peak_demand_kw"] = peak_demand
+
+        return result
+
     # ---- One-shot bootstrap used by the coordinator ----
     async def ensure_bootstrap(self, username: str, password: str) -> None:
         if not await self.prime_session():
@@ -264,3 +321,36 @@ class NBPowerClient:
             date_to=today.isoformat(),
         )
         return self.extract_tentative(res)
+
+    async def fetch_latest_mi_day(
+        self,
+        reference: Optional[date] = None,
+        *,
+        lookback_days: int = 3,
+    ) -> dict:
+        """Fetch the most recent day that has Mi (15-minute) data available."""
+
+        if not all([self._token, self._account_number, self._utility_account_number]):
+            raise RuntimeError("Client not bootstrapped")
+
+        reference = reference or date.today()
+        meter_number = self._meter_number or ""
+
+        for offset in range(1, max(lookback_days, 1) + 1):
+            target_date = reference - timedelta(days=offset)
+            payload = await self.get_usage_data(
+                self._token,
+                self._account_number,
+                self._utility_account_number,
+                meter_number,
+                mode="Mi",
+                rtype="K",
+                date_from=target_date.isoformat(),
+                date_to=target_date.isoformat(),
+            )
+            detail = self.extract_mi_day(payload, target_date)
+            if detail:
+                detail["mi_lookback_days"] = offset
+                return detail
+
+        return {}

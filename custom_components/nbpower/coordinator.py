@@ -48,7 +48,7 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             if self.client._token is None:  # pylint: disable=protected-access
                 await self._async_bootstrap()
 
-            return await self.client.fetch_mtd(date.today())
+            return await self._async_fetch_all()
         except ConfigEntryAuthFailed:
             self.client._token = None  # pylint: disable=protected-access
             raise
@@ -60,8 +60,38 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             self.client._token = None  # pylint: disable=protected-access
             try:
                 await self._async_bootstrap()
-                return await self.client.fetch_mtd(date.today())
+                return await self._async_fetch_all()
             except ConfigEntryAuthFailed:
                 raise
             except Exception as err2:  # pylint: disable=broad-except
                 raise UpdateFailed(f"Error updating NB Power data: {err2}") from err2
+
+    async def _async_fetch_all(self) -> dict:
+        """Fetch both monthly summary and the latest available 15-minute data."""
+
+        today = date.today()
+        summary = await self.client.fetch_mtd(today)
+        detail: dict = {}
+        try:
+            detail = await self.client.fetch_latest_mi_day(today)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.debug("NB Power Mi data fetch failed: %s", err)
+
+        combined = {**summary}
+        if detail:
+            combined.update(detail)
+        else:
+            previous = self.data if isinstance(self.data, dict) else {}
+            for key in (
+                "mi_last_date",
+                "mi_last_total_kwh",
+                "mi_last_total_cost",
+                "mi_interval_count",
+                "mi_interval_data",
+                "mi_peak_demand_kw",
+                "mi_lookback_days",
+            ):
+                if key in previous:
+                    combined[key] = previous[key]
+
+        return combined

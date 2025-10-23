@@ -15,6 +15,8 @@ This integration was built for NB Power customers in New Brunswick, Canada and p
   - **Month-to-date cost**
   - **Projected monthly bill**
   - **Projected kWh**
+  - **Previous day energy (15-minute data)**
+  - **Previous day cost (15-minute data)**
 - 🕒 Data automatically refreshed on a configurable interval (default 5 min)
 
 ---
@@ -54,6 +56,11 @@ After setup the following entities will appear:
 | `sensor.nb_power_mtd_cost` | Cost so far this month | $ |
 | `sensor.nb_power_projected_bill` | Projected end-of-month bill | $ |
 | `sensor.nb_power_projected_kwh` | Projected monthly usage | kWh |
+| `sensor.nb_power_previous_day_energy` | Sum of the most recent day with 15-minute data | kWh |
+| `sensor.nb_power_previous_day_cost` | Cost for that day | $ |
+
+> ℹ️ NB Power typically releases 15-minute interval data 24–48 hours after it is collected. The integration automatically looks
+> back up to three days to find the latest available dataset.
 
 ---
 
