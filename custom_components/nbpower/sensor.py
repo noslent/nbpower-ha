@@ -72,6 +72,21 @@ SENSORS: list[NBSensorDescription] = [
         state_class=SensorStateClass.TOTAL,
         attr_key="projected_kwh",
     ),
+    NBSensorDescription(
+        key="last_day_kwh",
+        name="NB Power Previous Day Energy",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        attr_key="mi_last_total_kwh",
+    ),
+    NBSensorDescription(
+        key="last_day_cost",
+        name="NB Power Previous Day Cost",
+        native_unit_of_measurement=CURRENCY_DOLLAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        attr_key="mi_last_total_cost",
+    ),
     # NBSensorDescription(
     #     key="peak_load_kw",
     #     name="NB Power Peak Load",
