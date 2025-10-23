@@ -23,7 +23,7 @@ This integration was built for NB Power customers in New Brunswick, Canada and p
 
 ### Option 1 — HACS (recommended)
 1. In Home Assistant → **HACS → Integrations → ⋮ → Custom repositories**
-2. Add your repo URL (e.g. `https://github.com/<you>/nbpower-ha`)  
+2. Add this repository URL: `https://github.com/noslent/nbpower-ha`
    Category: **Integration**
 3. Install **NB Power**
 4. Restart Home Assistant
