@@ -1,10 +1,11 @@
 {
   "domain": "nbpower",
   "name": "NB Power",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "requirements": ["beautifulsoup4>=4.12.3", "async-timeout>=4.0.3"],
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/noslent/nbpower-ha/issues",
-  "codeowners": ["@noslent"]
+  "codeowners": ["@noslent"],
+  "config_flow": true
 }
 
