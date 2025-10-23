@@ -1,4 +1,3 @@
-sensor:
-  - platform: nbpower
-    username: !secret nbp_user
-    password: !secret nbp_pass
+# Configuration for NB Power is now handled entirely via the Home Assistant UI.
+# This file is kept for reference only and does not need to be included in
+# configuration.yaml.
