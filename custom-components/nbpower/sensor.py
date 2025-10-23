@@ -1,9 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from datetime import timedelta, date
 
+from dataclasses import dataclass
 import logging
 import voluptuous as vol
+from homeassistant import config_entries
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
@@ -11,14 +11,15 @@ from homeassistant.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
 )
 from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, CURRENCY_DOLLAR, CONF_USERNAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
-from .api import NBPowerClient
+from .const import DOMAIN
 
 # ✅ Proper YAML platform schema
 PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
@@ -94,72 +95,61 @@ SENSORS: list[NBSensorDescription] = [
     # NBSensorDesc("highest_kw", "NB Power Highest kW", "kW", SensorDeviceClass.POWER, SensorStateClass.MEASUREMENT, "highest_kw"),
 #]
 
+_LOGGER = logging.getLogger(__name__)
+
+
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    add_entities,
+    async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ):
-    """YAML setup: 
-    sensor:
-      - platform: nbpower
-        username: !secret nbp_user
-        password: !secret nbp_pass
-    """
+    """Import NB Power configuration from YAML."""
     username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
     if not username or not password:
         raise ValueError("nbpower sensor requires username and password")
 
-    session = async_get_clientsession(hass)
-    client = NBPowerClient(session)
-
-    async def _async_update():
-        nonlocal client
-        # Bootstrap on first load; subsequent updates just fetch MTD
-        if client._token is None:
-            await client.ensure_bootstrap(username, password)
-        return await client.fetch_mtd(date.today())
-
-
-    logger = logging.getLogger(__name__)
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        logger,
-        name=f"{DOMAIN}_coordinator",
-        update_method=_async_update,
-        update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+    _LOGGER.warning(
+        "Setting up NB Power via YAML is deprecated; please remove the YAML and use the UI flow."
     )
 
-    await coordinator.async_refresh()
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_IMPORT},
+            data={CONF_USERNAME: username, CONF_PASSWORD: password},
+        )
+    )
 
-    #coordinator = DataUpdateCoordinator(
-    #    hass,
-    #    name=f"{DOMAIN}_coordinator",
-    #    update_method=_async_update,
-    #    update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
-    #)
 
-    #await coordinator.async_config_entry_first_refresh()
-
-    entities = [NBPowerSensor(coordinator, d) for d in SENSORS]
-    add_entities(entities, True)
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up NB Power sensors from a config entry."""
+    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    entities = [NBPowerSensor(coordinator, description, entry) for description in SENSORS]
+    async_add_entities(entities)
 
 
 class NBPowerSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: DataUpdateCoordinator, desc: NBSensorDesc):
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        desc: NBSensorDescription,
+        entry: ConfigEntry,
+    ) -> None:
         super().__init__(coordinator)
         self.entity_description = desc
-        self._attr_unique_id = f"nbpower_{desc.key}"
+        self._attr_unique_id = f"nbpower_{entry.entry_id}_{desc.key}"
         self._attr_name = desc.name
-        #self._attr_native_unit_of_measurement = desc.unit
-        #if desc.device_class:
-        #    self._attr_device_class = desc.device_class
-        #if desc.state_class:
-        #    self._attr_state_class = desc.state_class
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="NB Power Account",
+            manufacturer="NB Power",
+        )
 
     @property
     def native_value(self):

@@ -39,21 +39,16 @@ Then restart Home Assistant.
 
 ## ⚙️ Configuration
 
-Add to your `configuration.yaml`:
-```yaml
-sensor:
-  - platform: nbpower
-    username: !secret nbp_user
-    password: !secret nbp_pass
-```
+1. In Home Assistant go to **Settings → Devices & Services → + Add Integration**
+2. Search for **NB Power**
+3. Enter the same username and password you use on the NB Power customer portal
+4. Click **Submit**
 
-And in your `secrets.yaml`:
-```yaml
-nbp_user: your@email.com
-nbp_pass: yourpassword
-```
+That’s it — no need to edit `configuration.yaml` or `secrets.yaml` anymore.
 
-Restart Home Assistant.  
+> 💡 If you configured NB Power via YAML previously, just remove those entries. The
+> integration will automatically import them the first time you upgrade to this version.
+
 After a few seconds the following entities will appear:
 
 | Entity ID | Description | Units |
