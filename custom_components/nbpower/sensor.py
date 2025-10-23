@@ -76,7 +76,7 @@ SENSORS: list[NBSensorDescription] = [
         key="last_day_kwh",
         name="NB Power Previous Day Energy",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
+        device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
         attr_key="mi_last_total_kwh",
     ),
