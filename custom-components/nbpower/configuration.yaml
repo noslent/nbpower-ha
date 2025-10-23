@@ -1,0 +1,4 @@
+sensor:
+  - platform: nbpower
+    username: !secret nbp_user
+    password: !secret nbp_pass
