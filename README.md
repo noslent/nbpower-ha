@@ -39,22 +39,14 @@ Then restart Home Assistant.
 
 ## ⚙️ Configuration
 
-Add to your `configuration.yaml`:
-```yaml
-sensor:
-  - platform: nbpower
-    username: !secret nbp_user
-    password: !secret nbp_pass
-```
+1. In Home Assistant go to **Settings → Devices & Services**.
+2. Click **Add Integration** and search for **NB Power**.
+3. Enter your NB Power username and password when prompted.
+4. Home Assistant will create the integration entry and add the sensors automatically.
 
-And in your `secrets.yaml`:
-```yaml
-nbp_user: your@email.com
-nbp_pass: yourpassword
-```
+If you previously configured NB Power via `configuration.yaml`, you can safely remove that YAML. When the integration loads it will prompt you to migrate the entry into the UI-based flow.
 
-Restart Home Assistant.  
-After a few seconds the following entities will appear:
+After setup the following entities will appear:
 
 | Entity ID | Description | Units |
 |------------|-------------|-------|

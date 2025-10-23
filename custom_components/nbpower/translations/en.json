@@ -1,0 +1,31 @@
+{
+  "title": "NB Power",
+  "config": {
+    "step": {
+      "user": {
+        "title": "NB Power",
+        "description": "Enter your NB Power account credentials.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate NB Power",
+        "description": "Please confirm the credentials for {username}.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to NB Power.",
+      "invalid_auth": "Invalid username or password.",
+      "unknown": "Unexpected error occurred."
+    },
+    "abort": {
+      "reauth_successful": "Re-authentication successful."
+    }
+  }
+}
