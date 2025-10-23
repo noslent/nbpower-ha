@@ -88,9 +88,3 @@ To contribute:
 git clone https://github.com/noslent/nbpower-ha
 cd nbpower-ha
 ```
-
----
-
-## 🪪 License
-
-[MIT License](LICENSE)
