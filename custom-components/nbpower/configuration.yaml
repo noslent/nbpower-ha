@@ -1,3 +1,5 @@
+# Legacy YAML configuration (kept for reference).
+# The integration now exposes a config flow and will import this into the UI automatically.
 sensor:
   - platform: nbpower
     username: !secret nbp_user

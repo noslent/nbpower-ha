@@ -143,10 +143,11 @@ class NBPowerSensor(CoordinatorEntity, SensorEntity):
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = desc
-        self._attr_unique_id = f"nbpower_{entry.entry_id}_{desc.key}"
+        account_identifier = (entry.unique_id or entry.entry_id).lower()
+        self._attr_unique_id = f"nbpower_{account_identifier}_{desc.key}"
         self._attr_name = desc.name
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
+            identifiers={(DOMAIN, account_identifier)},
             name="NB Power Account",
             manufacturer="NB Power",
         )

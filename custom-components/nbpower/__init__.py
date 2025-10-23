@@ -40,17 +40,50 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     username: str = entry.data[CONF_USERNAME]
     password: str = entry.data[CONF_PASSWORD]
 
-    async def _async_update() -> dict:
+    async def _async_bootstrap() -> None:
+        if client.is_bootstrapped:
+            return
         try:
-            if client._token is None:  # pylint: disable=protected-access
-                await client.ensure_bootstrap(username, password)
-            return await client.fetch_mtd(date.today())
+            await client.ensure_bootstrap(username, password)
+            account_number = (client.account_number or "").strip()
+            if account_number and entry.unique_id != account_number:
+                hass.config_entries.async_update_entry(entry, unique_id=account_number)
         except RuntimeError as err:
+            client.reset_bootstrap()
             if _is_auth_error(err):
                 raise ConfigEntryAuthFailed from err
             raise UpdateFailed(str(err)) from err
         except Exception as err:  # pylint: disable=broad-except
+            client.reset_bootstrap()
             raise UpdateFailed(str(err)) from err
+
+    async def _async_update() -> dict:
+        await _async_bootstrap()
+
+        attempts_remaining = 2
+        while attempts_remaining:
+            attempts_remaining -= 1
+            try:
+                return await client.fetch_mtd(date.today())
+            except RuntimeError as err:
+                message = str(err)
+                if _is_auth_error(err):
+                    client.reset_bootstrap()
+                    raise ConfigEntryAuthFailed from err
+
+                lowered = message.lower()
+                if attempts_remaining and (
+                    "client not bootstrapped" in lowered
+                    or "unauthorized" in lowered
+                    or "401" in lowered
+                ):
+                    client.reset_bootstrap()
+                    await _async_bootstrap()
+                    continue
+
+                raise UpdateFailed(message) from err
+            except Exception as err:  # pylint: disable=broad-except
+                raise UpdateFailed(str(err)) from err
 
     coordinator = DataUpdateCoordinator(
         hass,
@@ -79,7 +112,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        data = hass.data[DOMAIN].pop(entry.entry_id, None)
+        client: NBPowerClient | None = None
+        if isinstance(data, dict):
+            client = data.get("client")
+        if isinstance(client, NBPowerClient):
+            client.reset_bootstrap()
     return unload_ok
 
 

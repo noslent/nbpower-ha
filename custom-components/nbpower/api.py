@@ -33,6 +33,36 @@ class NBPowerClient:
         self._utility_account_number: Optional[str] = None
         self._meter_number: Optional[str] = None
 
+    # ---- Bootstrap state helpers ----
+    @property
+    def token(self) -> Optional[str]:
+        return self._token
+
+    @property
+    def account_number(self) -> Optional[str]:
+        return self._account_number
+
+    @property
+    def utility_account_number(self) -> Optional[str]:
+        return self._utility_account_number
+
+    @property
+    def meter_number(self) -> Optional[str]:
+        return self._meter_number
+
+    @property
+    def is_bootstrapped(self) -> bool:
+        return all(
+            [self._token, self._account_number, self._utility_account_number]
+        )
+
+    def reset_bootstrap(self) -> None:
+        """Forget any cached identifiers so a fresh login is forced."""
+        self._token = None
+        self._account_number = None
+        self._utility_account_number = None
+        self._meter_number = None
+
     # ---- Session priming & login ----
     async def prime_session(self) -> bool:
         default_url = f"{BASE}/Default.aspx"
@@ -247,7 +277,7 @@ class NBPowerClient:
 
     async def fetch_mtd(self, today: Optional[date] = None) -> dict:
         """Return tentative (MTD) block using monthly mode."""
-        if not all([self._token, self._account_number, self._utility_account_number]):
+        if not self.is_bootstrapped:
             raise RuntimeError("Client not bootstrapped")
         if not self._meter_number:
             # still try — some APIs don’t require meter number for monthly
