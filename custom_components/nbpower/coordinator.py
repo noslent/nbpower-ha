@@ -3,15 +3,13 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-from .api import NBPowerClient
 from .const import (
     CONF_ACCOUNT_NUMBER,
     CONF_METER_NUMBER,
@@ -24,13 +22,21 @@ from .const import (
 )
 from .usage import UsageStore
 
+if TYPE_CHECKING:
+    from .api import NBPowerClient
+
 _LOGGER = logging.getLogger(__name__)
 
 
 class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Class to manage fetching NB Power data."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        client: "NBPowerClient",
+    ) -> None:
         """Initialize coordinator."""
         data = entry.data
         self._username = data[CONF_USERNAME]
@@ -42,7 +48,7 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self._account_number = data.get(CONF_ACCOUNT_NUMBER)
         self._utility_account_number = data.get(CONF_UTILITY_ACCOUNT_NUMBER)
         self._meter_number = data.get(CONF_METER_NUMBER)
-        self.client = NBPowerClient(async_get_clientsession(hass))
+        self.client = client
         self._store = UsageStore(hass, entry.entry_id)
         self._store_loaded = False
 

@@ -13,9 +13,6 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-from .api import NBPowerClient
 from .const import (
     CONF_ACCOUNT_NUMBER,
     CONF_METER_NUMBER,
@@ -25,6 +22,7 @@ from .const import (
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
+from .helpers import async_create_nbpower_client
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,8 +53,7 @@ class InvalidAuth(HomeAssistantError):
 
 async def validate_input(hass: HomeAssistant, data: dict) -> dict:
     """Validate the user input allows us to connect."""
-    session = async_get_clientsession(hass)
-    client = NBPowerClient(session)
+    client = await async_create_nbpower_client(hass)
 
     try:
         await client.ensure_bootstrap(data[CONF_USERNAME], data[CONF_PASSWORD])
