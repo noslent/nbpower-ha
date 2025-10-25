@@ -39,6 +39,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 @dataclass
 class NBSensorDescription(SensorEntityDescription):
     attr_key: str = ""
+    attributes_key: str | None = None
 
 SENSORS: list[NBSensorDescription] = [
     NBSensorDescription(
@@ -48,6 +49,7 @@ SENSORS: list[NBSensorDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
         attr_key="so_far_kwh",
+        attributes_key="summary",
     ),
     NBSensorDescription(
         key="mtd_cost",
@@ -55,6 +57,7 @@ SENSORS: list[NBSensorDescription] = [
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.TOTAL,
         attr_key="so_far_dollars",
+        attributes_key="summary",
     ),
     NBSensorDescription(
         key="projected_bill",
@@ -62,6 +65,7 @@ SENSORS: list[NBSensorDescription] = [
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.MEASUREMENT,
         attr_key="projected_dollars",
+        attributes_key="summary",
     ),
     # Optional extras:
     NBSensorDescription(
@@ -71,21 +75,63 @@ SENSORS: list[NBSensorDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
         attr_key="projected_kwh",
+        attributes_key="summary",
     ),
     NBSensorDescription(
-        key="last_day_kwh",
-        name="NB Power Previous Day Energy",
-        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=None,
-        state_class=SensorStateClass.MEASUREMENT,
-        attr_key="mi_last_total_kwh",
+        key="usage_15min_kwh",
+        name="NB Power 15 Minute Energy Series",
+        attr_key="usage_15min_kwh",
+        attributes_key="usage_15min_kwh",
+        suggested_object_id="nb_power_15_minute_energy_series",
     ),
     NBSensorDescription(
-        key="last_day_cost",
-        name="NB Power Previous Day Cost",
-        native_unit_of_measurement=CURRENCY_DOLLAR,
-        state_class=SensorStateClass.MEASUREMENT,
-        attr_key="mi_last_total_cost",
+        key="usage_15min_dollars",
+        name="NB Power 15 Minute Cost Series",
+        attr_key="usage_15min_dollars",
+        attributes_key="usage_15min_dollars",
+        suggested_object_id="nb_power_15_minute_cost_series",
+    ),
+    NBSensorDescription(
+        key="usage_hourly_kwh",
+        name="NB Power Hourly Energy Series",
+        attr_key="usage_hourly_kwh",
+        attributes_key="usage_hourly_kwh",
+        suggested_object_id="nb_power_hourly_energy_series",
+    ),
+    NBSensorDescription(
+        key="usage_hourly_dollars",
+        name="NB Power Hourly Cost Series",
+        attr_key="usage_hourly_dollars",
+        attributes_key="usage_hourly_dollars",
+        suggested_object_id="nb_power_hourly_cost_series",
+    ),
+    NBSensorDescription(
+        key="usage_daily_kwh",
+        name="NB Power Daily Energy Series",
+        attr_key="usage_daily_kwh",
+        attributes_key="usage_daily_kwh",
+        suggested_object_id="nb_power_daily_energy_series",
+    ),
+    NBSensorDescription(
+        key="usage_daily_dollars",
+        name="NB Power Daily Cost Series",
+        attr_key="usage_daily_dollars",
+        attributes_key="usage_daily_dollars",
+        suggested_object_id="nb_power_daily_cost_series",
+    ),
+    NBSensorDescription(
+        key="usage_monthly_kwh",
+        name="NB Power Monthly Energy Series",
+        attr_key="usage_monthly_kwh",
+        attributes_key="usage_monthly_kwh",
+        suggested_object_id="nb_power_monthly_energy_series",
+    ),
+    NBSensorDescription(
+        key="usage_monthly_dollars",
+        name="NB Power Monthly Cost Series",
+        attr_key="usage_monthly_dollars",
+        attributes_key="usage_monthly_dollars",
+        suggested_object_id="nb_power_monthly_cost_series",
     ),
     # NBSensorDescription(
     #     key="peak_load_kw",
@@ -175,9 +221,17 @@ class NBPowerSensor(CoordinatorEntity[NBPowerDataUpdateCoordinator], SensorEntit
     @property
     def native_value(self):
         data = self.coordinator.data or {}
-        return data.get(self.entity_description.attr_key)
+        value = data.get(self.entity_description.attr_key)
+        if isinstance(value, dict):
+            return value.get("latest")
+        return value
 
     @property
     def extra_state_attributes(self):
-        # expose the entire tentative block for debugging/graphs
-        return self.coordinator.data or {}
+        data = self.coordinator.data or {}
+        attrs_key = getattr(self.entity_description, "attributes_key", None)
+        if attrs_key:
+            attrs_value = data.get(attrs_key)
+            if isinstance(attrs_value, dict):
+                return attrs_value
+        return None

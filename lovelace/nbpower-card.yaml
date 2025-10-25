@@ -1,0 +1,137 @@
+# NB Power usage dashboard card
+#
+# Requirements:
+#   - custom:apexcharts-card (https://github.com/RomRider/apexcharts-card)
+#
+# Replace the entity IDs below with the ones created by your NB Power integration.
+# The suggested defaults are:
+#   sensor.nb_power_15_minute_energy_series
+#   sensor.nb_power_15_minute_cost_series
+#   sensor.nb_power_hourly_energy_series
+#   sensor.nb_power_hourly_cost_series
+#   sensor.nb_power_daily_energy_series
+#   sensor.nb_power_daily_cost_series
+#   sensor.nb_power_monthly_energy_series
+#   sensor.nb_power_monthly_cost_series
+#
+# Add this file as a manual dashboard (Lovelace → ⋮ → Raw configuration editor → !include).
+type: vertical-stack
+cards:
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: NB Power 15 Minute Usage
+    graph_span: 72h
+    span:
+      start: day
+    yaxis:
+      - id: kwh
+        title: kWh
+        decimals: 2
+      - id: dollars
+        title: $
+        decimals: 2
+        opposite: true
+    series:
+      - entity: sensor.nb_power_15_minute_energy_series
+        name: kWh
+        yaxis_id: kwh
+        type: column
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.usage_kwh ?? 0]);
+      - entity: sensor.nb_power_15_minute_cost_series
+        name: $
+        yaxis_id: dollars
+        type: line
+        curve: smooth
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.cost ?? 0]);
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: NB Power Hourly Usage
+    graph_span: 30d
+    yaxis:
+      - id: kwh
+        title: kWh
+        decimals: 2
+      - id: dollars
+        title: $
+        decimals: 2
+        opposite: true
+    series:
+      - entity: sensor.nb_power_hourly_energy_series
+        name: kWh
+        yaxis_id: kwh
+        type: column
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.usage_kwh ?? 0]);
+      - entity: sensor.nb_power_hourly_cost_series
+        name: $
+        yaxis_id: dollars
+        type: line
+        curve: smooth
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.cost ?? 0]);
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: NB Power Daily Usage
+    graph_span: 400d
+    yaxis:
+      - id: kwh
+        title: kWh
+        decimals: 2
+      - id: dollars
+        title: $
+        decimals: 2
+        opposite: true
+    series:
+      - entity: sensor.nb_power_daily_energy_series
+        name: kWh
+        yaxis_id: kwh
+        type: column
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.usage_kwh ?? 0]);
+      - entity: sensor.nb_power_daily_cost_series
+        name: $
+        yaxis_id: dollars
+        type: line
+        curve: smooth
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.cost ?? 0]);
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: NB Power Monthly Usage
+    graph_span: 60mo
+    yaxis:
+      - id: kwh
+        title: kWh
+        decimals: 2
+      - id: dollars
+        title: $
+        decimals: 2
+        opposite: true
+    series:
+      - entity: sensor.nb_power_monthly_energy_series
+        name: kWh
+        yaxis_id: kwh
+        type: column
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.usage_kwh ?? 0]);
+      - entity: sensor.nb_power_monthly_cost_series
+        name: $
+        yaxis_id: dollars
+        type: line
+        curve: smooth
+        data_generator: |
+          const rows = entity?.attributes?.rows ?? [];
+          return rows.map((row) => [row.datetime ?? `${row.date}T00:00:00`, row.value ?? row.cost ?? 0]);
