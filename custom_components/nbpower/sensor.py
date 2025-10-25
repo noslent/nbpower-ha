@@ -40,6 +40,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 class NBSensorDescription(SensorEntityDescription):
     attr_key: str = ""
     attributes_key: str | None = None
+    suggested_object_id: str | None = None
 
 SENSORS: list[NBSensorDescription] = [
     NBSensorDescription(
