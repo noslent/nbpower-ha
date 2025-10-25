@@ -16,16 +16,33 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import NBPowerClient
-from .const import DOMAIN
+from .const import (
+    CONF_ACCOUNT_NUMBER,
+    CONF_METER_NUMBER,
+    CONF_SCAN_INTERVAL,
+    CONF_UTILITY_ACCOUNT_NUMBER,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    MIN_SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_USERNAME): str,
-        vol.Required(CONF_PASSWORD): str,
-    }
-)
+def _build_schema(*, default_interval: int = DEFAULT_SCAN_INTERVAL) -> vol.Schema:
+    """Return the schema for user credentials and refresh interval."""
+
+    bounded_default = max(default_interval, MIN_SCAN_INTERVAL)
+
+    return vol.Schema(
+        {
+            vol.Required(CONF_USERNAME): str,
+            vol.Required(CONF_PASSWORD): str,
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=bounded_default,
+            ): vol.All(vol.Coerce(int), vol.Clamp(min=MIN_SCAN_INTERVAL)),
+        }
+    )
 
 
 class CannotConnect(HomeAssistantError):
@@ -57,12 +74,15 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict:
 
     unique_source = data[CONF_USERNAME].lower().encode()
     unique_id = hashlib.sha256(unique_source).hexdigest()
-    account_number = getattr(client, "_account_number", None)  # pylint: disable=protected-access
+    account_number = client.account_number
     title = account_number or data[CONF_USERNAME]
 
     return {
         "title": str(title),
         "unique_id": unique_id,
+        CONF_ACCOUNT_NUMBER: account_number,
+        CONF_UTILITY_ACCOUNT_NUMBER: client.utility_account_number,
+        CONF_METER_NUMBER: client.meter_number,
     }
 
 
@@ -77,6 +97,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
+        schema = _build_schema(
+            default_interval=(
+                user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+                if user_input
+                else DEFAULT_SCAN_INTERVAL
+            )
+        )
         if user_input is not None:
             try:
                 return await self._async_finish_setup(user_input)
@@ -90,7 +117,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=DATA_SCHEMA,
+            data_schema=schema,
             errors=errors,
         )
 
@@ -114,6 +141,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(self, user_input: dict | None = None) -> FlowResult:
         """Handle the re-auth confirmation step."""
         errors: dict[str, str] = {}
+        default_interval = DEFAULT_SCAN_INTERVAL
+        if self._reauth_entry:
+            default_interval = self._reauth_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         if user_input is not None:
             try:
                 return await self._async_finish_setup(user_input)
@@ -124,6 +154,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected error re-authenticating NB Power")
                 errors["base"] = "unknown"
+            default_interval = user_input.get(CONF_SCAN_INTERVAL, default_interval)
 
         placeholders = {}
         if self._reauth_entry:
@@ -131,7 +162,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=DATA_SCHEMA,
+            data_schema=_build_schema(default_interval=default_interval),
             errors=errors,
             description_placeholders=placeholders,
         )
@@ -145,15 +176,33 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Validate input and create or update the config entry."""
         info = await validate_input(self.hass, user_input)
 
+        account_number = info.get(CONF_ACCOUNT_NUMBER)
+        utility_account_number = info.get(CONF_UTILITY_ACCOUNT_NUMBER)
+        meter_number = info.get(CONF_METER_NUMBER) or ""
+
+        entry_data = {
+            CONF_USERNAME: user_input[CONF_USERNAME],
+            CONF_PASSWORD: user_input[CONF_PASSWORD],
+            CONF_SCAN_INTERVAL: max(
+                user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                MIN_SCAN_INTERVAL,
+            ),
+            CONF_ACCOUNT_NUMBER: account_number,
+            CONF_UTILITY_ACCOUNT_NUMBER: utility_account_number,
+            CONF_METER_NUMBER: meter_number,
+        }
+
+        updates_for_abort = entry_data if updates is None else {**updates, **entry_data}
+
         if self._reauth_entry:
             assert self._reauth_entry is not None
             self.hass.config_entries.async_update_entry(
                 self._reauth_entry,
-                data=user_input,
+                data=entry_data,
             )
             await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
 
         await self.async_set_unique_id(info["unique_id"])
-        self._abort_if_unique_id_configured(updates=updates)
-        return self.async_create_entry(title=info["title"], data=user_input)
+        self._abort_if_unique_id_configured(updates=updates_for_abort)
+        return self.async_create_entry(title=info["title"], data=entry_data)

@@ -33,6 +33,24 @@ class NBPowerClient:
         self._utility_account_number: Optional[str] = None
         self._meter_number: Optional[str] = None
 
+    @property
+    def account_number(self) -> Optional[str]:
+        """Return the cached account number, if available."""
+
+        return self._account_number
+
+    @property
+    def utility_account_number(self) -> Optional[str]:
+        """Return the cached utility account number, if available."""
+
+        return self._utility_account_number
+
+    @property
+    def meter_number(self) -> Optional[str]:
+        """Return the cached meter number, if available."""
+
+        return self._meter_number
+
     # ---- Session priming & login ----
     async def prime_session(self) -> bool:
         default_url = f"{BASE}/Default.aspx"
@@ -279,7 +297,15 @@ class NBPowerClient:
         return result
 
     # ---- One-shot bootstrap used by the coordinator ----
-    async def ensure_bootstrap(self, username: str, password: str) -> None:
+    async def ensure_bootstrap(
+        self,
+        username: str,
+        password: str,
+        *,
+        account_number: Optional[str] = None,
+        utility_account_number: Optional[str] = None,
+        meter_number: Optional[str] = None,
+    ) -> None:
         if not await self.prime_session():
             raise RuntimeError("Failed to prime session")
         if not await self.login(username, password):
@@ -288,6 +314,12 @@ class NBPowerClient:
         if not token:
             raise RuntimeError("Token not found in account page")
         self._token = token
+        if account_number and utility_account_number:
+            self._account_number = account_number
+            self._utility_account_number = utility_account_number
+            if meter_number is not None:
+                self._meter_number = meter_number
+            return
         v = await self.verify_token(token)
         result = (v or {}).get("result", {})
         data = result.get("Data", {}) if isinstance(result, dict) else {}
