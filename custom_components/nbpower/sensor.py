@@ -40,7 +40,6 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 class NBSensorDescription(SensorEntityDescription):
     attr_key: str = ""
     attributes_key: str | None = None
-    suggested_object_id: str | None = None
 
 SENSORS: list[NBSensorDescription] = [
     NBSensorDescription(
@@ -83,56 +82,48 @@ SENSORS: list[NBSensorDescription] = [
         name="NB Power 15 Minute Energy Series",
         attr_key="usage_15min_kwh",
         attributes_key="usage_15min_kwh",
-        suggested_object_id="nb_power_15_minute_energy_series",
     ),
     NBSensorDescription(
         key="usage_15min_dollars",
         name="NB Power 15 Minute Cost Series",
         attr_key="usage_15min_dollars",
         attributes_key="usage_15min_dollars",
-        suggested_object_id="nb_power_15_minute_cost_series",
     ),
     NBSensorDescription(
         key="usage_hourly_kwh",
         name="NB Power Hourly Energy Series",
         attr_key="usage_hourly_kwh",
         attributes_key="usage_hourly_kwh",
-        suggested_object_id="nb_power_hourly_energy_series",
     ),
     NBSensorDescription(
         key="usage_hourly_dollars",
         name="NB Power Hourly Cost Series",
         attr_key="usage_hourly_dollars",
         attributes_key="usage_hourly_dollars",
-        suggested_object_id="nb_power_hourly_cost_series",
     ),
     NBSensorDescription(
         key="usage_daily_kwh",
         name="NB Power Daily Energy Series",
         attr_key="usage_daily_kwh",
         attributes_key="usage_daily_kwh",
-        suggested_object_id="nb_power_daily_energy_series",
     ),
     NBSensorDescription(
         key="usage_daily_dollars",
         name="NB Power Daily Cost Series",
         attr_key="usage_daily_dollars",
         attributes_key="usage_daily_dollars",
-        suggested_object_id="nb_power_daily_cost_series",
     ),
     NBSensorDescription(
         key="usage_monthly_kwh",
         name="NB Power Monthly Energy Series",
         attr_key="usage_monthly_kwh",
         attributes_key="usage_monthly_kwh",
-        suggested_object_id="nb_power_monthly_energy_series",
     ),
     NBSensorDescription(
         key="usage_monthly_dollars",
         name="NB Power Monthly Cost Series",
         attr_key="usage_monthly_dollars",
         attributes_key="usage_monthly_dollars",
-        suggested_object_id="nb_power_monthly_cost_series",
     ),
     # NBSensorDescription(
     #     key="peak_load_kw",
