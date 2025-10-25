@@ -4,13 +4,23 @@ from __future__ import annotations
 from datetime import date, timedelta
 import logging
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import NBPowerClient
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    CONF_ACCOUNT_NUMBER,
+    CONF_METER_NUMBER,
+    CONF_SCAN_INTERVAL,
+    CONF_UTILITY_ACCOUNT_NUMBER,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    MIN_SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,23 +28,43 @@ _LOGGER = logging.getLogger(__name__)
 class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Class to manage fetching NB Power data."""
 
-    def __init__(self, hass: HomeAssistant, username: str, password: str) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize coordinator."""
-        self._username = username
-        self._password = password
+        data = entry.data
+        self._username = data[CONF_USERNAME]
+        self._password = data[CONF_PASSWORD]
+        self._scan_interval = max(
+            data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+            MIN_SCAN_INTERVAL,
+        )
+        self._account_number = data.get(CONF_ACCOUNT_NUMBER)
+        self._utility_account_number = data.get(CONF_UTILITY_ACCOUNT_NUMBER)
+        self._meter_number = data.get(CONF_METER_NUMBER)
         self.client = NBPowerClient(async_get_clientsession(hass))
 
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_coordinator",
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=self._scan_interval),
         )
 
     async def _async_bootstrap(self) -> None:
         """Ensure the API client is authenticated and ready."""
         try:
-            await self.client.ensure_bootstrap(self._username, self._password)
+            await self.client.ensure_bootstrap(
+                self._username,
+                self._password,
+                account_number=self._account_number,
+                utility_account_number=self._utility_account_number,
+                meter_number=self._meter_number,
+            )
+            if self._account_number is None:
+                self._account_number = self.client.account_number
+            if self._utility_account_number is None:
+                self._utility_account_number = self.client.utility_account_number
+            if self._meter_number is None:
+                self._meter_number = self.client.meter_number
         except RuntimeError as err:
             if "Login failed" in str(err):
                 raise ConfigEntryAuthFailed("Invalid credentials") from err

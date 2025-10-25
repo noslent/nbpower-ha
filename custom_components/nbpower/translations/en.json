@@ -7,7 +7,8 @@
         "description": "Enter your NB Power account credentials.",
         "data": {
           "username": "Username",
-          "password": "Password"
+          "password": "Password",
+          "scan_interval": "Refresh interval (seconds)"
         }
       },
       "reauth_confirm": {
@@ -15,7 +16,8 @@
         "description": "Please confirm the credentials for {username}.",
         "data": {
           "username": "Username",
-          "password": "Password"
+          "password": "Password",
+          "scan_interval": "Refresh interval (seconds)"
         }
       }
     },
