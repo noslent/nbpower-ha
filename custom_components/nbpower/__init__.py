@@ -19,6 +19,10 @@ from .const import (
 )
 from .coordinator import NBPowerDataUpdateCoordinator
 
+# Pre-import the sensor platform to avoid triggering the blocking import detector
+# when Home Assistant forwards the config entry setup.
+from . import sensor as _sensor  # noqa: F401  pylint: disable=unused-import
+
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
