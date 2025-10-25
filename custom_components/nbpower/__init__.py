@@ -5,9 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import NBPowerClient
 from .const import (
     CONF_ACCOUNT_NUMBER,
     CONF_METER_NUMBER,
@@ -18,6 +16,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
 )
 from .coordinator import NBPowerDataUpdateCoordinator
+from .helpers import async_create_nbpower_client
 
 # Pre-import the sensor platform to avoid triggering the blocking import detector
 # when Home Assistant forwards the config entry setup.
@@ -42,8 +41,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data[CONF_SCAN_INTERVAL] = scan_interval
         updated = True
 
+    client = await async_create_nbpower_client(hass)
+
     if not data.get(CONF_ACCOUNT_NUMBER) or not data.get(CONF_UTILITY_ACCOUNT_NUMBER) or CONF_METER_NUMBER not in data:
-        client = NBPowerClient(async_get_clientsession(hass))
         await client.ensure_bootstrap(data[CONF_USERNAME], data[CONF_PASSWORD])
         data[CONF_ACCOUNT_NUMBER] = client.account_number or ""
         data[CONF_UTILITY_ACCOUNT_NUMBER] = client.utility_account_number or ""
@@ -56,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if refreshed_entry is not None:
             entry = refreshed_entry
 
-    coordinator = NBPowerDataUpdateCoordinator(hass, entry)
+    coordinator = NBPowerDataUpdateCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
