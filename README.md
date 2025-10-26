@@ -68,6 +68,8 @@ After setup the following entities will appear:
 
 > ℹ️ The most recent day’s totals are derived from the daily dataset and exposed in the `previous_day` attribute on every sensor.
 
+> ℹ️ Each dataset sensor also has a companion entity with a `Statistics` suffix. These entities backfill Home Assistant's long-term statistics database without altering the primary sensor history.
+
 > ℹ️ NB Power typically releases 15-minute interval data 24–48 hours after it is collected. The integration automatically looks
 > back up to three days to find the latest available dataset.
 
