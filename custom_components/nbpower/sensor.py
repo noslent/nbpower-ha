@@ -47,12 +47,16 @@ class NBSensorDescription(SensorEntityDescription):
     attributes_key: str | None = None
 
 @dataclass
-class NBPowerUsageStatisticDescription(SensorEntityDescription):
+class NBPowerUsageSeriesDescription(SensorEntityDescription):
     dataset_key: str = ""
     value_key: str = "value"
+    unit_class: str | None = None
+
+
+@dataclass
+class NBPowerUsageStatisticDescription(NBPowerUsageSeriesDescription):
     has_mean: bool = False
     has_sum: bool = True
-    unit_class: str | None = None
 
 
 SENSORS: list[NBSensorDescription] = [
@@ -93,8 +97,8 @@ SENSORS: list[NBSensorDescription] = [
 ]
 
 
-USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
-    NBPowerUsageStatisticDescription(
+USAGE_SERIES_SENSORS: list[NBPowerUsageSeriesDescription] = [
+    NBPowerUsageSeriesDescription(
         key="usage_15min_kwh",
         name="NB Power 15 Minute Energy",
         dataset_key="usage_15min_kwh",
@@ -104,16 +108,15 @@ USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         unit_class="energy",
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_15min_dollars",
         name="NB Power 15 Minute Cost",
         dataset_key="usage_15min_dollars",
         value_key="cost",
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.MEASUREMENT,
-        has_sum=True,
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_hourly_kwh",
         name="NB Power Hourly Energy",
         dataset_key="usage_hourly_kwh",
@@ -123,16 +126,15 @@ USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         unit_class="energy",
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_hourly_dollars",
         name="NB Power Hourly Cost",
         dataset_key="usage_hourly_dollars",
         value_key="cost",
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.MEASUREMENT,
-        has_sum=True,
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_daily_kwh",
         name="NB Power Daily Energy",
         dataset_key="usage_daily_kwh",
@@ -142,16 +144,15 @@ USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         unit_class="energy",
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_daily_dollars",
         name="NB Power Daily Cost",
         dataset_key="usage_daily_dollars",
         value_key="cost",
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.MEASUREMENT,
-        has_sum=True,
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_monthly_kwh",
         name="NB Power Monthly Energy",
         dataset_key="usage_monthly_kwh",
@@ -161,13 +162,104 @@ USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         unit_class="energy",
     ),
-    NBPowerUsageStatisticDescription(
+    NBPowerUsageSeriesDescription(
         key="usage_monthly_dollars",
         name="NB Power Monthly Cost",
         dataset_key="usage_monthly_dollars",
         value_key="cost",
         native_unit_of_measurement=CURRENCY_DOLLAR,
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+]
+
+
+USAGE_STATISTIC_SENSORS: list[NBPowerUsageStatisticDescription] = [
+    NBPowerUsageStatisticDescription(
+        key="usage_15min_kwh_statistics",
+        name="NB Power 15 Minute Energy Statistics",
+        dataset_key="usage_15min_kwh",
+        value_key="usage_kwh",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+        unit_class="energy",
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_15min_dollars_statistics",
+        name="NB Power 15 Minute Cost Statistics",
+        dataset_key="usage_15min_dollars",
+        value_key="cost",
+        native_unit_of_measurement=CURRENCY_DOLLAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_hourly_kwh_statistics",
+        name="NB Power Hourly Energy Statistics",
+        dataset_key="usage_hourly_kwh",
+        value_key="usage_kwh",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+        unit_class="energy",
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_hourly_dollars_statistics",
+        name="NB Power Hourly Cost Statistics",
+        dataset_key="usage_hourly_dollars",
+        value_key="cost",
+        native_unit_of_measurement=CURRENCY_DOLLAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_daily_kwh_statistics",
+        name="NB Power Daily Energy Statistics",
+        dataset_key="usage_daily_kwh",
+        value_key="usage_kwh",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+        unit_class="energy",
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_daily_dollars_statistics",
+        name="NB Power Daily Cost Statistics",
+        dataset_key="usage_daily_dollars",
+        value_key="cost",
+        native_unit_of_measurement=CURRENCY_DOLLAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_monthly_kwh_statistics",
+        name="NB Power Monthly Energy Statistics",
+        dataset_key="usage_monthly_kwh",
+        value_key="usage_kwh",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
+        has_sum=True,
+        unit_class="energy",
+    ),
+    NBPowerUsageStatisticDescription(
+        key="usage_monthly_dollars_statistics",
+        name="NB Power Monthly Cost Statistics",
+        dataset_key="usage_monthly_dollars",
+        value_key="cost",
+        native_unit_of_measurement=CURRENCY_DOLLAR,
+        state_class=SensorStateClass.MEASUREMENT,
+        has_mean=False,
         has_sum=True,
     ),
 ]
@@ -227,6 +319,10 @@ async def async_setup_entry(
         NBPowerSensor(coordinator, entry, description) for description in SENSORS
     ]
     entities.extend(
+        NBPowerUsageSeriesSensor(coordinator, entry, description)
+        for description in USAGE_SERIES_SENSORS
+    )
+    entities.extend(
         NBPowerUsageStatisticSensor(coordinator, entry, description)
         for description in USAGE_STATISTIC_SENSORS
     )
@@ -273,38 +369,10 @@ class NBPowerSensor(CoordinatorEntity[NBPowerDataUpdateCoordinator], SensorEntit
         return None
 
 
-class NBPowerUsageStatisticSensor(
-    CoordinatorEntity[NBPowerDataUpdateCoordinator], SensorEntity
-):
-    """Sensor that exposes usage statistics via Home Assistant's statistics API."""
+class _NBPowerUsageDatasetMixin:
+    """Shared helpers for usage dataset based sensors."""
 
-    _attr_has_entity_name = True
-
-    def __init__(
-        self,
-        coordinator: NBPowerDataUpdateCoordinator,
-        entry: ConfigEntry,
-        description: NBPowerUsageStatisticDescription,
-    ) -> None:
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title or "NB Power",
-            manufacturer="NB Power",
-        )
-        self._imported: set[str] = set()
-        self._metadata: dict[str, Any] | None = None
-        self._import_lock = asyncio.Lock()
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        await self._async_import_statistics()
-
-    def _handle_coordinator_update(self) -> None:
-        self.hass.async_create_task(self._async_import_statistics())
-        super()._handle_coordinator_update()
+    entity_description: NBPowerUsageSeriesDescription
 
     @property
     def _dataset(self) -> dict:
@@ -344,6 +412,89 @@ class NBPowerUsageStatisticSensor(
                 return value
         return None
 
+    def _current_row(self) -> dict | None:
+        rows = self._dataset.get("rows") or []
+        for row in reversed(rows):
+            if self._extract_value(row) is not None:
+                return row
+        return None
+
+
+class NBPowerUsageSeriesSensor(
+    _NBPowerUsageDatasetMixin, CoordinatorEntity[NBPowerDataUpdateCoordinator], SensorEntity
+):
+    """Sensor exposing the cached usage dataset for Lovelace visualizations."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: NBPowerDataUpdateCoordinator,
+        entry: ConfigEntry,
+        description: NBPowerUsageSeriesDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title or "NB Power",
+            manufacturer="NB Power",
+        )
+
+    @property
+    def native_value(self):
+        row = self._current_row()
+        if not row:
+            return None
+        return self._extract_value(row)
+
+    @property
+    def extra_state_attributes(self):
+        dataset = self._dataset
+        if not dataset:
+            return None
+        attrs: dict[str, Any] = {}
+        for key in ("rows", "dates", "latest", "updated_at", "unit", "mode", "type"):
+            value = dataset.get(key)
+            if value is not None:
+                attrs[key] = value
+        return attrs or None
+
+
+class NBPowerUsageStatisticSensor(
+    _NBPowerUsageDatasetMixin, CoordinatorEntity[NBPowerDataUpdateCoordinator], SensorEntity
+):
+    """Sensor that exposes usage statistics via Home Assistant's statistics API."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: NBPowerDataUpdateCoordinator,
+        entry: ConfigEntry,
+        description: NBPowerUsageStatisticDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title or "NB Power",
+            manufacturer="NB Power",
+        )
+        self._imported: set[str] = set()
+        self._metadata: dict[str, Any] | None = None
+        self._import_lock = asyncio.Lock()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        await self._async_import_statistics()
+
+    def _handle_coordinator_update(self) -> None:
+        self.hass.async_create_task(self._async_import_statistics())
+        super()._handle_coordinator_update()
+
     def _parse_start(self, row: dict) -> datetime | None:
         tzinfo = dt_util.get_time_zone(self.hass.config.time_zone)
         dt_text = row.get("datetime")
@@ -372,13 +523,6 @@ class NBPowerUsageStatisticSensor(
         start_dt = datetime.combine(parsed_date, time.min)
         start_dt = self._localize(start_dt, tzinfo)
         return dt_util.as_utc(start_dt)
-
-    def _current_row(self) -> dict | None:
-        rows = self._dataset.get("rows") or []
-        for row in reversed(rows):
-            if self._extract_value(row) is not None:
-                return row
-        return None
 
     @property
     def native_value(self):
