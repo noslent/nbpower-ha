@@ -18,9 +18,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MIN_SCAN_INTERVAL,
-    USAGE_SENSOR_KEYS,
 )
-from .usage import UsageStore
 
 if TYPE_CHECKING:
     from .api import NBPowerClient
@@ -49,9 +47,6 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self._utility_account_number = data.get(CONF_UTILITY_ACCOUNT_NUMBER)
         self._meter_number = data.get(CONF_METER_NUMBER)
         self.client = client
-        self._store = UsageStore(hass, entry.entry_id)
-        self._store_loaded = False
-
         super().__init__(
             hass,
             _LOGGER,
@@ -75,9 +70,6 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
                 self._utility_account_number = self.client.utility_account_number
             if self._meter_number is None:
                 self._meter_number = self.client.meter_number
-            if not self._store_loaded:
-                await self._store.async_load()
-                self._store_loaded = True
         except RuntimeError as err:
             if "Login failed" in str(err):
                 raise ConfigEntryAuthFailed("Invalid credentials") from err
@@ -110,57 +102,10 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
                 raise UpdateFailed(f"Error updating NB Power data: {err2}") from err2
 
     async def _async_fetch_all(self) -> dict:
-        """Fetch monthly summary and refresh cached usage datasets."""
-
-        if not self._store_loaded:
-            await self._store.async_load()
-            self._store_loaded = True
+        """Fetch the latest monthly summary data."""
 
         today = date.today()
         summary = await self.client.fetch_mtd(today)
-
-        if not self._account_number or not self._utility_account_number:
-            raise UpdateFailed("Missing account identifiers for usage refresh")
-
-        store_changed = False
-        datasets_to_process = list(USAGE_SENSOR_KEYS.keys())
-
-        for mode, rtype in datasets_to_process:
-            ranges = self._store.determine_fetch_ranges(mode, rtype, today)
-            for start, end in ranges:
-                payload = await self.client.get_usage_data(
-                    self.client._token,  # pylint: disable=protected-access
-                    self._account_number,
-                    self._utility_account_number,
-                    self._meter_number or "",
-                    mode=mode,
-                    rtype=rtype,
-                    date_from=start.isoformat(),
-                    date_to=end.isoformat(),
-                )
-                if self._store.add_payload(mode, rtype, payload):
-                    store_changed = True
-
-        if store_changed:
-            await self._store.async_save()
-
-        usage_payloads = {}
-        for key, data in self._store.datasets_for_sensors().items():
-            sensor_key = USAGE_SENSOR_KEYS.get(key)
-            if sensor_key:
-                usage_payloads[sensor_key] = data
-
-        previous_day = self._store.latest_daily_summary()
-
         combined: dict = {**summary}
         combined["summary"] = summary
-        combined.update(usage_payloads)
-        combined["previous_day"] = previous_day
-        if previous_day.get("usage_kwh") is not None:
-            combined["previous_day_kwh"] = previous_day["usage_kwh"]
-        if previous_day.get("cost") is not None:
-            combined["previous_day_cost"] = previous_day["cost"]
-        if previous_day.get("date"):
-            combined["previous_day_date"] = previous_day["date"]
-
         return combined
