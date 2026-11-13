@@ -10,6 +10,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 from .const import (
     CONF_ACCOUNT_NUMBER,
     CONF_METER_NUMBER,
@@ -19,6 +20,7 @@ from .const import (
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
+from .usage_statistics import async_import_daily_statistics
 
 if TYPE_CHECKING:
     from .api import NBPowerClient
@@ -108,4 +110,18 @@ class NBPowerDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         summary = await self.client.fetch_mtd(today)
         combined: dict = {**summary}
         combined["summary"] = summary
+
+        # Per-day usage goes into long-term statistics (for the Energy dashboard).
+        # A failure here must not take down the month-to-date sensors.
+        try:
+            rows = await self.client.fetch_daily(today)
+            await async_import_daily_statistics(
+                self.hass,
+                self.client.account_number or "account",
+                rows,
+                dt_util.now().date(),
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.warning("NB Power daily statistics import failed: %s", err)
+
         return combined
