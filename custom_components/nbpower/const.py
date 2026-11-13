@@ -19,5 +19,5 @@ __all__ = [
     "DOMAIN",
     "MIN_SCAN_INTERVAL",
 ]
-BASE = "https://nbpower.com"
+BASE = "https://www.nbpower.com"
 WIDGET_API = "https://nbp-svc.smartcmobile.com/WidgetAPI"
