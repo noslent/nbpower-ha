@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date, timedelta
 from typing import Optional, Dict, Any
 from urllib.parse import urljoin
@@ -7,6 +8,8 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from .const import BASE, WIDGET_API
+
+_LOGGER = logging.getLogger(__name__)
 
 VALID_MODES = {"Mi", "H", "D", "M", "S"}  # 15min, Hourly, Daily, Monthly, Seasonal
 VALID_TYPES = {"K", "D"}                  # K (kWh/kW), D (dollars)
@@ -57,6 +60,9 @@ class NBPowerClient:
         headers = {"User-Agent": "Mozilla/5.0", "Referer": BASE + "/", "Origin": BASE}
         async with self.session.get(default_url, headers=headers) as r:
             html = await r.text()
+            # Resolve the form action against the page we actually landed on
+            # (the request may have been redirected, e.g. apex -> www).
+            default_url = str(r.url)
         soup = BeautifulSoup(html, "html.parser")
         form = soup.find("form")
         if not form:
@@ -79,6 +85,8 @@ class NBPowerClient:
         headers = {"User-Agent": "Mozilla/5.0", "Referer": login_url, "Origin": BASE}
         async with self.session.get(login_url, headers=headers) as r:
             html = await r.text()
+            # Resolve the form action against the final URL after redirects.
+            login_url = str(r.url)
         soup = BeautifulSoup(html, "html.parser")
         form = soup.find("form")
         if not form:
@@ -121,6 +129,7 @@ class NBPowerClient:
         async with self.session.post(post_url, data=data, headers=post_headers, allow_redirects=True) as r2:
             html2 = await r2.text()
             if "weblogin.aspx" in str(r2.url).lower() or "Cookies required" in html2:
+                _LOGGER.debug("NB Power login failed; landed on %s", r2.url)
                 return False
             return True
 
