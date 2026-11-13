@@ -24,6 +24,27 @@ def _num(v):
         return None
 
 
+_MONTHS = {
+    name: idx
+    for idx, name in enumerate(
+        [
+            "january", "february", "march", "april", "may", "june", "july",
+            "august", "september", "october", "november", "december",
+        ],
+        start=1,
+    )
+}
+
+
+def _parse_nbp_date(value) -> Optional[date]:
+    """Parse e.g. 'October 14, 2026' without depending on the process locale."""
+    try:
+        month, day, year = str(value).replace(",", " ").split()
+        return date(int(year), _MONTHS[month.lower()], int(day))
+    except (ValueError, KeyError):
+        return None
+
+
 def first_of_month_iso(today: date) -> str:
     return today.replace(day=1).isoformat()
 
@@ -249,6 +270,34 @@ class NBPowerClient:
         }
 
     @staticmethod
+    def extract_daily(payload: dict) -> list[dict[str, Any]]:
+        """Return one dict per day: date, kwh, cost and the portal's validation status."""
+        data = (payload or {}).get("data") or {}
+        rows = data.get("objUsageGenerationResultSetTwo")
+        if not isinstance(rows, list):
+            return []
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            day = _parse_nbp_date(row.get("UsageDate") or row.get("DateOfReading"))
+            kwh = _num(row.get("UsageValue"))
+            if kwh is None:
+                kwh = _num(row.get("Consumption"))
+            if day is None or kwh is None:
+                continue
+            out.append(
+                {
+                    "date": day,
+                    "kwh": kwh,
+                    "cost": _num(row.get("Amount")),
+                    "status": row.get("ValidationStatus"),
+                }
+            )
+        out.sort(key=lambda r: r["date"])
+        return out
+
+    @staticmethod
     def extract_mi_day(payload: dict, target_date: Optional[date] = None) -> dict:
         """Return a summary for a 15-minute (Mi) usage payload."""
 
@@ -362,6 +411,25 @@ class NBPowerClient:
             date_to=today.isoformat(),
         )
         return self.extract_tentative(res)
+
+    async def fetch_daily(
+        self, today: Optional[date] = None, *, lookback_days: int = 35
+    ) -> list[dict[str, Any]]:
+        """Return per-day usage (kWh and dollars) for the current billing window."""
+        if not all([self._token, self._account_number, self._utility_account_number]):
+            raise RuntimeError("Client not bootstrapped")
+        today = today or date.today()
+        payload = await self.get_usage_data(
+            self._token,
+            self._account_number,
+            self._utility_account_number,
+            self._meter_number or "",
+            mode="D",
+            rtype="K",
+            date_from=(today - timedelta(days=lookback_days)).isoformat(),
+            date_to=today.isoformat(),
+        )
+        return self.extract_daily(payload)
 
     async def fetch_latest_mi_day(
         self,
